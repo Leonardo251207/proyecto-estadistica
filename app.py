@@ -109,6 +109,56 @@ if df is not None:
         st.subheader("3.2. Nivel de Significancia")
         alpha = st.select_slider("Selecciona el valor de α:", options=[0.01, 0.05, 0.10], value=0.05)
         st.write(f"Nivel de confianza: {(1-alpha)*100}%")
+    
+    # --- CONTINUACIÓN DEL MÓDULO 3: CÁLCULOS ---
+    if st.button("Calcular Prueba de Hipótesis"):
+        st.markdown("---")
+        st.subheader("3.3. Estadístico de Prueba y Resultados")
+        
+        # 1. Obtener datos de la columna seleccionada
+        datos_serie = df[col_analisis]
+        n = len(datos_serie)
+        media_muestral = datos_serie.mean()
+        # Usamos la desviación estándar de la muestra como estimación de sigma
+        sigma = datos_serie.std() 
+        
+        # 2. Cálculo del Estadístico Z
+        # Fórmula: Z = (media_muestral - mu_0) / (sigma / sqrt(n))
+        z_stat = (media_muestral - mu_0) / (sigma / np.sqrt(n))
+        
+        # 3. Cálculo del P-Value según el tipo de prueba
+        if tipo_test == "Bilateral (μ ≠ μ0)":
+            p_value = 2 * (1 - stats.norm.cdf(abs(z_stat)))
+            tipo_display = "Bilateral"
+        elif tipo_test == "Cola Izquierda (μ < μ0)":
+            p_value = stats.norm.cdf(z_stat)
+            tipo_display = "Cola Izquierda"
+        else: # Cola Derecha
+            p_value = 1 - stats.norm.cdf(z_stat)
+            tipo_display = "Cola Derecha"
+
+        # Mostrar resultados (Sección 3.4 del reporte)
+        res1, res2 = st.columns(2)
+        with res1:
+            st.metric("Media Muestral (x̄)", f"{media_muestral:.4f}")
+            st.metric("Desviación Estándar (s)", f"{sigma:.4f}")
+        with res2:
+            st.metric("Tamaño de muestra (n)", n)
+            st.metric("Estadístico Z", f"{z_stat:.4f}")
+
+        st.write(f"**P-value calculado:** {p_value:.4f}")
+
+        # --- 3.5. DECISIÓN ESTADÍSTICA ---
+        st.subheader("3.5. Decisión")
+        if p_value < alpha:
+            st.error(f"RECHAZAR H0: El p-value ({p_value:.4f}) es menor que alpha ({alpha}).")
+            st.write("Existen pruebas suficientes para decir que la media es distinta a la hipótesis planteada.")
+        else:
+            st.success(f"NO RECHAZAR H0: El p-value ({p_value:.4f}) es mayor o igual a alpha ({alpha}).")
+            st.write("No hay pruebas suficientes para rechazar la hipótesis nula.")
+            
+        # Visualización de la zona de rechazo (Concepto clave)
+        st.info("💡 Tip para tu reporte: La decisión se basa en comparar el P-value con el nivel de significancia seleccionado.")
 
 st.markdown("---")
 st.caption("Proyecto de Probabilidad y Estadística - Entrega 18 de abril")
