@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import io
 from scipy import stats
+import google.generativeai as genai
 
 # Configuración de la página
 st.set_page_config(page_title="Análisis Estadístico Profesional", layout="wide")
@@ -159,6 +160,58 @@ if df is not None:
             
         # Visualización de la zona de rechazo (Concepto clave)
         st.info("💡 Tip para tu reporte: La decisión se basa en comparar el P-value con el nivel de significancia seleccionado.")
+
+        # GUARDAR EN MEMORIA (Añade estas líneas al final del bloque del botón)
+        st.session_state['calculo_realizado'] = True
+        st.session_state['datos_ia'] = {
+            'col': col_analisis,
+            'media': media_muestral,
+            'mu0': mu_0,
+            'n': n,
+            'z': z_stat,
+            'p': p_value,
+            'alpha': alpha,
+            'tipo': tipo_test
+        }
+
+   # --- 4. ASISTENTE DE IA (GEMINI API) ---
+    st.markdown("---")
+    st.header("4. Asistente de IA (Gemini API)")
+
+    api_key = st.text_input("Introduce tu Gemini API Key:", type="password")
+
+    if api_key and st.session_state.get('calculo_realizado'):
+        if st.button("Pedir análisis a la IA"):
+            try:
+                # Asegúrate de usar la librería correcta y el modelo vigente
+                genai.configure(api_key=api_key)
+                model = genai.GenerativeModel('gemini-2.5-flash')
+            
+                # Datos calculados
+                d = st.session_state['datos_ia']
+            
+                # PROMPT MEJORADO: Estructura profesional
+                prompt = f"""
+                Actúa como un experto en estadística inferencial. Analiza los resultados de la siguiente prueba de hipótesis Z:
+            
+                - Media muestral: {d['media']:.4f}
+                - Estadístico Z: {d['z']:.4f}
+                - P-value: {d['p']:.4f}
+                - Nivel de significancia (alpha): {d['alpha']:.2f}
+            
+                Por favor, proporciona:
+                1. Una interpretación clara de si se rechaza o no la hipótesis nula.
+                2. Una explicación sencilla de qué significa el p-value obtenido en este contexto.
+                """
+            
+                with st.spinner("Analizando con Gemini..."):
+                    response = model.generate_content(prompt)
+                    st.write("### Análisis estadístico:")
+                    st.info(response.text)
+                
+            except Exception as e:
+                st.error(f"Error técnico: {e}")
+                st.write("Asegúrate de que tu API Key sea válida y empiece por 'AIza'.")
 
 st.markdown("---")
 st.caption("Proyecto de Probabilidad y Estadística - Entrega 18 de abril")
