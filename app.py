@@ -10,7 +10,7 @@ import google.generativeai as genai
 # Configuración de la página
 st.set_page_config(page_title="Análisis Estadístico Profesional", layout="wide")
 
-# Título de la App (Sección 1 del reporte)
+# Título de la App 
 st.title("📊 Aplicación de Análisis Estadístico y Pruebas de Hipótesis")
 st.markdown("---")
 
@@ -37,7 +37,7 @@ if df is not None:
     st.write("### Vista previa de los datos")
     st.dataframe(df.head(), use_container_width=True)
 
-   # --- 2. DESCRIPCIÓN DE LOS DATOS (DISEÑO FINAL Y LIMPIO) ---
+   # --- 2. DESCRIPCIÓN DE LOS DATOS ---
     st.header("2. Descripción de los Datos")
     
     columnas_numericas = df.select_dtypes(include=[np.number]).columns.tolist()
@@ -65,15 +65,14 @@ if df is not None:
                 fig_h, ax_h = plt.subplots(figsize=(10, 5))
                 sns.histplot(df[col_analisis], kde=True, ax=ax_h, color="#1f77b4", edgecolor="white")
                 
-                # TITULO GENÉRICO Y SIN ETIQUETAS DUPLICADAS
+                # TITULO GENÉRICO
                 ax_h.set_title("Distribución de los Datos", fontweight='bold', fontsize=12)
-                ax_h.set_ylabel("") # Quitamos "count"
-                ax_h.set_xlabel("") # QUITAMOS EL ETIQUETADO QUE SE CORTABA
+                ax_h.set_ylabel("") 
+                ax_h.set_xlabel("") 
                 
                 plt.tight_layout()
                 st.pyplot(fig_h)
                 
-                # AQUÍ VA LA PREGUNTA COMPLETA (LEGIBLE Y SIN CORTAR)
                 st.caption(f"**Variable analizada:** {col_analisis}")
                 
                 buf_h = io.BytesIO()
@@ -85,7 +84,7 @@ if df is not None:
                 sns.boxplot(x=df[col_analisis], ax=ax_b, color="#ff7f0e")
                 
                 ax_b.set_title("Diagrama de Caja (Outliers)", fontweight='bold', fontsize=12)
-                ax_b.set_xlabel("") # QUITAMOS EL ETIQUETADO
+                ax_b.set_xlabel("") 
                 
                 plt.tight_layout()
                 st.pyplot(fig_b)
@@ -149,7 +148,7 @@ if df is not None:
         }
         st.session_state['calculo_realizado'] = True
 
-    # --- MOSTRAR RESULTADOS (FUERA DEL BOTÓN PARA PERSISTENCIA) ---
+    # --- MOSTRAR RESULTADOS ---
     if st.session_state.get('calculo_realizado', False):
         d = st.session_state['datos_ia']
         
@@ -191,10 +190,9 @@ if df is not None:
             else:
                 try:
                     genai.configure(api_key=api_key)
-                    # IMPORTANTE: gemini-1.5-flash es el modelo vigente y estable
                     model = genai.GenerativeModel('gemini-2.5-flash')
                     
-                    # PROMPT ESTILO ACADÉMICO (Según guías docentes)
+                    # PROMPT
                     prompt = f"""
                     Actúa como un experto en estadística inferencial. Analiza los siguientes resultados:
                     - Variable: {d['col_nombre']}
@@ -211,7 +209,7 @@ if df is not None:
                     
                     with st.spinner("Gemini está procesando el razonamiento..."):
                         response = model.generate_content(prompt)
-                        st.write("### 🤖 Razonamiento del Experto IA:")
+                        st.write("### Razonamiento del Experto IA:")
                         st.info(response.text)
                         
                 except Exception as e:
@@ -219,4 +217,4 @@ if df is not None:
                     st.write("Verifica tu API Key y conexión.")
 
 st.markdown("---")
-st.caption("Proyecto de Probabilidad y Estadística - Entrega Final")
+st.caption("Proyecto de Probabilidad y Estadística - Universidad Politécnica de Chiapas")
