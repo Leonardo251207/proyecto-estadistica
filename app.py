@@ -106,125 +106,117 @@ if df is not None:
     else:
         st.error("❌ No se encontraron columnas numéricas.")
 
-    # --- 3. PLANTEAMIENTO DE LA PRUEBA DE HIPÓTESIS (AVANCE) ---
     st.markdown("---")
-    st.header("3. Planteamiento de la Prueba de Hipótesis")
-    st.write("En esta sección definiremos los parámetros para la Prueba Z.")
+    # --- 3. PRUEBA DE HIPÓTESIS (Z-TEST) ---
+    st.header("3. Prueba de Hipótesis para la Media (Z-Test)")
     
-    col_h, col_sig = st.columns(2)
-    
-    with col_h:
-        st.subheader("3.1. Definición de Hipótesis")
-        mu_0 = st.number_input("Hipótesis Nula (H0: μ = )", value=50.0)
-        tipo_test = st.selectbox("Hipótesis Alternativa (H1)", 
-                                ["Bilateral (μ ≠ μ0)", "Cola Izquierda (μ < μ0)", "Cola Derecha (μ > μ0)"])
-    
-    with col_sig:
-        st.subheader("3.2. Nivel de Significancia")
-        alpha = st.select_slider("Selecciona el valor de α:", options=[0.01, 0.05, 0.10], value=0.05)
-        st.write(f"Nivel de confianza: {(1-alpha)*100}%")
-    
-    # --- CONTINUACIÓN DEL MÓDULO 3: CÁLCULOS ---
-    if st.button("Calcular Prueba de Hipótesis"):
-        st.markdown("---")
-        st.subheader("3.3. Estadístico de Prueba y Resultados")
+    col1, col2 = st.columns(2)
+    with col1:
+        mu_0 = st.number_input("Valor hipotético de la media (μ₀):", value=float(df[col_analisis].mean()))
+    with col2:
+        alpha = st.slider("Nivel de significancia (α):", 0.01, 0.10, 0.05)
         
-        # 1. Obtener datos de la columna seleccionada
+    tipo_test = st.selectbox("Tipo de prueba:", ["Bilateral (μ ≠ μ0)", "Cola Izquierda (μ < μ0)", "Cola Derecha (μ > μ0)"])
+
+    # --- BOTÓN DE CÁLCULO ---
+    if st.button("Calcular Prueba de Hipótesis"):
         datos_serie = df[col_analisis]
         n = len(datos_serie)
         media_muestral = datos_serie.mean()
-        # Usamos la desviación estándar de la muestra como estimación de sigma
         sigma = datos_serie.std() 
         
-        # 2. Cálculo del Estadístico Z
-        # Fórmula: Z = (media_muestral - mu_0) / (sigma / sqrt(n))
+        # Cálculo de Z
         z_stat = (media_muestral - mu_0) / (sigma / np.sqrt(n))
         
-        # 3. Cálculo del P-Value según el tipo de prueba
+        # Cálculo de P-Value
         if tipo_test == "Bilateral (μ ≠ μ0)":
             p_value = 2 * (1 - stats.norm.cdf(abs(z_stat)))
-            tipo_display = "Bilateral"
         elif tipo_test == "Cola Izquierda (μ < μ0)":
             p_value = stats.norm.cdf(z_stat)
-            tipo_display = "Cola Izquierda"
-        else: # Cola Derecha
-            p_value = 1 - stats.norm.cdf(z_stat)
-            tipo_display = "Cola Derecha"
-
-        # Mostrar resultados (Sección 3.4 del reporte)
-        res1, res2 = st.columns(2)
-        with res1:
-            st.metric("Media Muestral (x̄)", f"{media_muestral:.4f}")
-            st.metric("Desviación Estándar (s)", f"{sigma:.4f}")
-        with res2:
-            st.metric("Tamaño de muestra (n)", n)
-            st.metric("Estadístico Z", f"{z_stat:.4f}")
-
-        st.write(f"**P-value calculado:** {p_value:.4f}")
-
-        # --- 3.5. DECISIÓN ESTADÍSTICA ---
-        st.subheader("3.5. Decisión")
-        if p_value < alpha:
-            st.error(f"RECHAZAR H0: El p-value ({p_value:.4f}) es menor que alpha ({alpha}).")
-            st.write("Existen pruebas suficientes para decir que la media es distinta a la hipótesis planteada.")
         else:
-            st.success(f"NO RECHAZAR H0: El p-value ({p_value:.4f}) es mayor o igual a alpha ({alpha}).")
-            st.write("No hay pruebas suficientes para rechazar la hipótesis nula.")
-            
-        # Visualización de la zona de rechazo (Concepto clave)
-        st.info("💡 Tip para tu reporte: La decisión se basa en comparar el P-value con el nivel de significancia seleccionado.")
+            p_value = 1 - stats.norm.cdf(z_stat)
 
-        # GUARDAR EN MEMORIA (Añade estas líneas al final del bloque del botón)
-        st.session_state['calculo_realizado'] = True
+        # GUARDAR EN SESSION STATE (Para que no se borre al usar la IA)
         st.session_state['datos_ia'] = {
-            'col': col_analisis,
+            'col_nombre': col_analisis,
             'media': media_muestral,
-            'mu0': mu_0,
+            'sigma': sigma,
             'n': n,
             'z': z_stat,
             'p': p_value,
             'alpha': alpha,
-            'tipo': tipo_test
+            'mu0': mu_0
         }
+        st.session_state['calculo_realizado'] = True
 
-   # --- 4. ASISTENTE DE IA (GEMINI API) ---
-    st.markdown("---")
-    st.header("4. Asistente de IA (Gemini API)")
+    # --- MOSTRAR RESULTADOS (FUERA DEL BOTÓN PARA PERSISTENCIA) ---
+    if st.session_state.get('calculo_realizado', False):
+        d = st.session_state['datos_ia']
+        
+        st.markdown("---")
+        st.subheader("3.3. Estadístico de Prueba y Resultados")
+        
+        res1, res2 = st.columns(2)
+        with res1:
+            st.metric("Media Muestral (x̄)", f"{d['media']:.4f}")
+            st.metric("Desviación Estándar (s)", f"{d['sigma']:.4f}")
+        with res2:
+            st.metric("Tamaño de muestra (n)", d['n'])
+            st.metric("Estadístico Z", f"{d['z']:.4f}")
 
-    api_key = st.text_input("Introduce tu Gemini API Key:", type="password")
+        st.write(f"**P-value calculado:** {d['p']:.4f}")
 
-    if api_key and st.session_state.get('calculo_realizado'):
-        if st.button("Pedir análisis a la IA"):
-            try:
-                # Asegúrate de usar la librería correcta y el modelo vigente
-                genai.configure(api_key=api_key)
-                model = genai.GenerativeModel('gemini-2.5-flash')
-            
-                # Datos calculados
-                d = st.session_state['datos_ia']
-            
-                # PROMPT MEJORADO: Estructura profesional
-                prompt = f"""
-                Actúa como un experto en estadística inferencial. Analiza los resultados de la siguiente prueba de hipótesis Z:
-            
-                - Media muestral: {d['media']:.4f}
-                - Estadístico Z: {d['z']:.4f}
-                - P-value: {d['p']:.4f}
-                - Nivel de significancia (alpha): {d['alpha']:.2f}
-            
-                Por favor, proporciona:
-                1. Una interpretación clara de si se rechaza o no la hipótesis nula.
-                2. Una explicación sencilla de qué significa el p-value obtenido en este contexto.
-                """
-            
-                with st.spinner("Analizando con Gemini..."):
-                    response = model.generate_content(prompt)
-                    st.write("### Análisis estadístico:")
-                    st.info(response.text)
-                
-            except Exception as e:
-                st.error(f"Error técnico: {e}")
-                st.write("Asegúrate de que tu API Key sea válida y empiece por 'AIza'.")
+        # --- 3.5. DECISIÓN ESTADÍSTICA ---
+        st.subheader("3.5. Decisión")
+        if d['p'] < d['alpha']:
+            st.error(f"RECHAZAR H0: El p-value ({d['p']:.4f}) es menor que alpha ({d['alpha']}).")
+            st.write("**Conclusión:** Existen pruebas suficientes para decir que la media es distinta a la hipótesis planteada.")
+        else:
+            st.success(f"NO RECHAZAR H0: El p-value ({d['p']:.4f}) es mayor o igual a alpha ({d['alpha']}).")
+            st.write("**Conclusión:** No hay pruebas suficientes para rechazar la hipótesis nula.")
+
+        st.markdown("---")
+        
+        # --- 4. EXPLICACIÓN CON IA ---
+        st.header("4. Análisis con Inteligencia Artificial")
+        
+        # Mostramos los datos que la IA va a leer para que el usuario esté seguro
+        st.info(f"Análisis para la variable: **{d['col_nombre']}**")
+        
+        api_key = st.text_input("Introduce tu Google API Key (Gemini):", type="password")
+        
+        if st.button("Generar Razonamiento IA"):
+            if not api_key:
+                st.warning("⚠️ Por favor, introduce una API Key válida.")
+            else:
+                try:
+                    genai.configure(api_key=api_key)
+                    # IMPORTANTE: gemini-1.5-flash es el modelo vigente y estable
+                    model = genai.GenerativeModel('gemini-2.5-flash')
+                    
+                    # PROMPT ESTILO ACADÉMICO (Según guías docentes)
+                    prompt = f"""
+                    Actúa como un experto en estadística inferencial. Analiza los siguientes resultados:
+                    - Variable: {d['col_nombre']}
+                    - Media obtenida: {d['media']:.4f} vs Media Hipotética (mu0): {d['mu0']:.4f}
+                    - Estadístico Z: {d['z']:.4f}
+                    - P-value: {d['p']:.4f}
+                    - Alpha: {d['alpha']:.2f}
+
+                    Por favor, proporciona una respuesta estructurada en:
+                    1. Interpretación del Estadístico Z (distancia en desviaciones estándar).
+                    2. Explicación del P-value y su relación con el nivel de significancia.
+                    3. Conclusión final en lenguaje sencillo pero profesional.
+                    """
+                    
+                    with st.spinner("Gemini está procesando el razonamiento..."):
+                        response = model.generate_content(prompt)
+                        st.write("### 🤖 Razonamiento del Experto IA:")
+                        st.info(response.text)
+                        
+                except Exception as e:
+                    st.error(f"Error técnico: {e}")
+                    st.write("Verifica tu API Key y conexión.")
 
 st.markdown("---")
-st.caption("Proyecto de Probabilidad y Estadística - Entrega 18 de abril")
+st.caption("Proyecto de Probabilidad y Estadística - Entrega Final")
