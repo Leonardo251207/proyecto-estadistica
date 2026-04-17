@@ -37,61 +37,74 @@ if df is not None:
     st.write("### Vista previa de los datos")
     st.dataframe(df.head(), use_container_width=True)
 
-    # --- 2. DESCRIPCIÓN DE LOS DATOS (FILTRO DE VARIABLES CUANTITATIVAS) ---
+   # --- 2. DESCRIPCIÓN DE LOS DATOS (DISEÑO FINAL Y LIMPIO) ---
     st.header("2. Descripción de los Datos")
     
-    # FILTRO CRÍTICO: Solo permitimos columnas numéricas (int y float)
     columnas_numericas = df.select_dtypes(include=[np.number]).columns.tolist()
     
     if len(columnas_numericas) > 0:
         col_analisis = st.selectbox("Selecciona la variable numérica para analizar:", columnas_numericas)
         
+        # Métricas rápidas
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("Media", f"{df[col_analisis].mean():.2f}")
+        m2.metric("Mediana", f"{df[col_analisis].median():.2f}")
+        m3.metric("Desv. Est.", f"{df[col_analisis].std():.2f}")
+        m4.metric("Tamaño (n)", len(df[col_analisis]))
+        
+        st.markdown("---")
+
         col_grafica, col_preguntas = st.columns([2, 1])
         
         with col_grafica:
-            plt.style.use('ggplot') 
-            fig, ax = plt.subplots(figsize=(10, 6))
+            st.write("### 📈 Visualización Dinámica")
+            tab_hist, tab_box = st.tabs(["Histograma", "Boxplot"])
             
-            # Histograma profesional con KDE
-            sns.histplot(
-                df[col_analisis], 
-                kde=True, 
-                ax=ax, 
-                color="#1f77b4", 
-                edgecolor="white", 
-                linewidth=1.5,
-                alpha=0.7
-            )
-            
-            ax.set_title(f"Distribución de: {col_analisis}", fontsize=14, fontweight='bold', pad=20)
-            ax.set_xlabel(col_analisis, fontsize=11)
-            ax.set_ylabel("Frecuencia / Densidad", fontsize=11)
-            
-            st.pyplot(fig)
+            with tab_hist:
+                plt.style.use('ggplot') 
+                fig_h, ax_h = plt.subplots(figsize=(10, 5))
+                sns.histplot(df[col_analisis], kde=True, ax=ax_h, color="#1f77b4", edgecolor="white")
+                
+                # TITULO GENÉRICO Y SIN ETIQUETAS DUPLICADAS
+                ax_h.set_title("Distribución de los Datos", fontweight='bold', fontsize=12)
+                ax_h.set_ylabel("") # Quitamos "count"
+                ax_h.set_xlabel("") # QUITAMOS EL ETIQUETADO QUE SE CORTABA
+                
+                plt.tight_layout()
+                st.pyplot(fig_h)
+                
+                # AQUÍ VA LA PREGUNTA COMPLETA (LEGIBLE Y SIN CORTAR)
+                st.caption(f"**Variable analizada:** {col_analisis}")
+                
+                buf_h = io.BytesIO()
+                fig_h.savefig(buf_h, format="png", bbox_inches='tight')
+                st.download_button("💾 Descargar Histograma", buf_h.getvalue(), "histograma.png", "image/png", key="btn_hist")
 
-            # Botón de descarga
-            buf = io.BytesIO()
-            fig.savefig(buf, format="png", bbox_inches='tight')
-            st.download_button(
-                label="💾 Descargar Histograma Profesional",
-                data=buf.getvalue(),
-                file_name=f"histograma_{col_analisis}.png",
-                mime="image/png"
-            )
+            with tab_box:
+                fig_b, ax_b = plt.subplots(figsize=(10, 5))
+                sns.boxplot(x=df[col_analisis], ax=ax_b, color="#ff7f0e")
+                
+                ax_b.set_title("Diagrama de Caja (Outliers)", fontweight='bold', fontsize=12)
+                ax_b.set_xlabel("") # QUITAMOS EL ETIQUETADO
+                
+                plt.tight_layout()
+                st.pyplot(fig_b)
+                
+                st.caption(f"**Variable analizada:** {col_analisis}")
+                
+                buf_b = io.BytesIO()
+                fig_b.savefig(buf_b, format="png", bbox_inches='tight')
+                st.download_button("💾 Descargar Boxplot", buf_b.getvalue(), "boxplot.png", "image/png", key="btn_box")
 
         with col_preguntas:
-            st.write("### 📝 Análisis Visual")
-            st.info("Utiliza esta sección para completar el punto 2 de tu reporte.")
-            st.radio("¿La distribución parece normal?", ["Sí", "No"], key="obs_norm")
-            st.radio("¿Se observa algún sesgo?", ["No", "Izquierda", "Derecha"], key="obs_sesgo")
-            st.radio("¿Hay presencia de Outliers?", ["No", "Sí"], key="obs_out")
+            st.write("### 📝 Análisis")
+            st.radio("¿Distribución normal?", ["Sí", "No"], key="obs_norm")
+            st.radio("¿Sesgo?", ["No", "Izquierda", "Derecha"], key="obs_sesgo")
+            st.radio("¿Hay Outliers?", ["No", "Sí"], key="obs_out")
+            st.dataframe(df[col_analisis].describe().to_frame().T.round(2), use_container_width=True)
             
-            # Datos para la Sección 2 del reporte
-            st.write(f"**Estadísticas rápidas de {col_analisis}:**")
-            st.write(f"- N. de observaciones: {len(df[col_analisis])}")
-            st.write(f"- Media: {df[col_analisis].mean():.2f}")
     else:
-        st.error("❌ El archivo cargado no contiene columnas numéricas. Por favor, sube un archivo con datos cuantitativos.")
+        st.error("❌ No se encontraron columnas numéricas.")
 
     # --- 3. PLANTEAMIENTO DE LA PRUEBA DE HIPÓTESIS (AVANCE) ---
     st.markdown("---")
